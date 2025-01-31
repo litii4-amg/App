@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
-const BACKEND_URL = 'https://api.seu-backend.com/upload-image';
+const BACKEND_GENERATE_URL = 'http://35.202.139.94:3000/upload-image'; 
 
 const CameraScreen = ({ navigation }) => {
   const [capturedPhoto, setCapturedPhoto] = useState(null);
@@ -17,18 +17,17 @@ const CameraScreen = ({ navigation }) => {
         return;
       }
 
-      // Abrir a câmera para tirar uma foto
       let result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, 
         allowsEditing: false,
         quality: 1,
       });
 
       console.log('Resultado do ImagePicker:', result);
 
-      if (!result.cancelled) {
-        console.log('Foto capturada:', result.uri);
-        setCapturedPhoto(result.uri);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        console.log('Foto capturada:', result.assets[0].uri);
+        setCapturedPhoto(result.assets[0].uri);
       } else {
         console.log('Captura de foto cancelada');
       }
@@ -55,9 +54,9 @@ const CameraScreen = ({ navigation }) => {
 
       console.log('Resultado do ImagePicker (Galeria):', result);
 
-      if (!result.cancelled) {
-        console.log('Foto selecionada:', result.uri);
-        setCapturedPhoto(result.uri);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        console.log('Foto selecionada:', result.assets[0].uri);
+        setCapturedPhoto(result.assets[0].uri);
       } else {
         console.log('Seleção de foto cancelada');
       }
@@ -73,36 +72,32 @@ const CameraScreen = ({ navigation }) => {
         Alert.alert('Erro', 'Nenhuma foto capturada para enviar.');
         return;
       }
-
+  
       setUploading(true);
 
+      const fileUri = capturedPhoto;
+      const fileName = fileUri.split('/').pop();
+  
       const formData = new FormData();
       formData.append('file', {
-        uri: capturedPhoto,
-        name: 'captured_image.jpg',
-        type: 'image/jpeg',
+        uri: fileUri,
+        type: 'image/jpeg',  
+        name: fileName,
       });
-
-      console.log('Enviando imagem para o backend:', BACKEND_URL);
-      console.log('FormData:', formData);
-
-      const response = await fetch(BACKEND_URL, {
+  
+      const response = await fetch(BACKEND_GENERATE_URL, {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
-
-      console.log('Resposta do backend:', response);
-
+  
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Erro no servidor: ${response.status} - ${errorText}`);
+        throw new Error(`Erro no upload: ${response.status} - ${errorText}`);
       }
-
+  
       const result = await response.json();
-      console.log('Resposta do backend (JSON):', result);
+      console.log('Upload realizado com sucesso! Resposta do servidor:', result);
+  
       Alert.alert('Sucesso', 'Imagem enviada com sucesso!');
       setCapturedPhoto(null);
       navigation.navigate('Home');
@@ -112,7 +107,7 @@ const CameraScreen = ({ navigation }) => {
     } finally {
       setUploading(false);
     }
-  };
+  };  
 
   const rejectPhoto = () => {
     console.log('Foto rejeitada');
